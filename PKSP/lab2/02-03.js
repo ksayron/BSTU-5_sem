@@ -4,7 +4,8 @@ const SURENAME = 'Кучерук';
 const NAME = 'Николай';
 const LASTNAME = 'Петрович';
 
-var serverFunction = function(request,response){
+
+const server = http.createServer(function(request,response){
     if(request.url==="/api/name"){
         response.writeHead(200,{'content-type':'text/plain; charset=utf-8'});
         response.end(SURENAME+' '+ NAME+' '+LASTNAME);
@@ -14,9 +15,7 @@ var serverFunction = function(request,response){
         response.writeHead(404,{'content-type':'text/html'});
         response.end(error);
     }
-}
-
-const server = http.createServer(serverFunction);
+});
 server.listen(5000);
 
 console.log("Server running at http://localhost:5000/api/name");

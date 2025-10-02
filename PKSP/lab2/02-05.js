@@ -4,7 +4,8 @@ const SURENAME = 'Кучерук';
 const NAME = 'Николай';
 const LASTNAME = 'Петрович';
 
-var serverFunction = function (request, response) {
+
+const server = http.createServer(function (request, response) {
     if (request.url === "/fetch") {
         let fetch = fs.readFileSync('./fetch.html');
         response.writeHead(200, { 'content-type': 'text/html;charset=utf-8' });
@@ -19,9 +20,7 @@ var serverFunction = function (request, response) {
         response.writeHead(404, { 'content-type': 'text/html;charset=utf-8' });
         response.end(error);
     }
-}
-
-const server = http.createServer(serverFunction);
+});
 
 server.listen(5000);
 

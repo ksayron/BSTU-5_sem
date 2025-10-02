@@ -1,8 +1,9 @@
-const PORT = 5000;
 var http = require('http');
 var fs = require('fs');
 
-var serverFunction = function (request, response) {
+
+
+var server = http.createServer(function (request, response) {
     if (request.url === "/png") {
         
         let pngName = './pic.png';
@@ -24,9 +25,7 @@ var serverFunction = function (request, response) {
         response.end(error);
     }
 
-}
-
-const server = http.createServer(serverFunction);
+});
 server.listen(5000);
 
 

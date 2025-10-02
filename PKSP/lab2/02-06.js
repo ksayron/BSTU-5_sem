@@ -5,7 +5,8 @@ const NAME = 'Николай';
 const LASTNAME = 'Петрович';
 
 
-var serverFunction = function(request,response){
+
+const server = http.createServer(function(request,response){
     if(request.url==="/jquery"){
         let jq = fs.readFileSync('./jquery.html');
         response.writeHead(200,{'content-type':'text/html;charset=utf-8'});
@@ -21,8 +22,7 @@ var serverFunction = function(request,response){
         response.end(error);
     }
 }
-
-const server = http.createServer(serverFunction);
+);
 
 server.listen(5000);
 
