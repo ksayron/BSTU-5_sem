@@ -8,20 +8,21 @@
 #define CLOSURE_ENABLED
 #define GET_ENABLED
 #define UPDATE_ENABLED
-#define EXECUTION_ENABLED
+#define ASYNC_ENABLED
+
 
 using namespace std;
 
 int main() {
     setlocale(LC_ALL, "rus");
-    HT::HTHANDLE* store1 = nullptr;  // Первое хранилище - музыкальные инструменты
-    HT::HTHANDLE* store2 = nullptr;  // Второе хранилище - электроника
+    HT::HTHANDLE* store1 = nullptr;  
+    HT::HTHANDLE* store2 = nullptr; 
 
     try {
 #ifdef CREATION_ENABLED
         wcout << L"\n--- СОЗДАНИЕ ХРАНИЛИЩ ---" << endl;
 
-        // Создаем первое хранилище для музыкальных инструментов
+       
         wcout << L"\n1. СОЗДАНИЕ ХРАНИЛИЩА:" << endl;
         store1 = HT::Create(500, 3, 30, 20, "Store.ht");
         if (store1 == NULL) {
@@ -33,7 +34,7 @@ int main() {
             wcout << L"  Максимальная емкость: " << store1->Capacity << L" элементов" << endl;
         }
 
-        // Создаем второе хранилище для электроники
+       
         wcout << L"\n2. ОТКРЫТИЕ ХРАНИЛИЩА:" << endl;
         store2 = HT::Create(500, 3, 30, 20, "Store1.ht");
         if (store2 == NULL) {
@@ -50,7 +51,7 @@ int main() {
 #ifdef OPENING_ENABLED
         wcout << L"\n--- ОТКРЫТИЕ ХРАНИЛИЩ ---" << endl;
 
-        // Закрываем и открываем хранилища для демонстрации
+        
         if (store1) HT::Close(store1);
         if (store2) HT::Close(store2);
 
@@ -179,6 +180,11 @@ int main() {
             wcout << L" Ошибка удаления элемента" << endl;
         }
 #endif
+#ifdef ASYNC_ENABLED
+        wcout << L"\n--- ОЖИДАНИЕ СНЭПШОТА ---" << endl;
+
+        SleepEx(5000, TRUE);
+#endif
 
 #ifdef CLOSURE_ENABLED
         wcout << L"\n--- ЗАКРЫТИЕ ХРАНИЛИЩ ---" << endl;
@@ -208,16 +214,12 @@ int main() {
         }
 #endif
 
-#ifdef EXECUTION_ENABLED
-        wcout << L"\n--- ЗАПУСК СЛУЖБЫ ---" << endl;
-        wcout << L"Для демонстрации работы с двумя хранилищами эта функция отключена" << endl;
-        // HT::ExecuteHT(); // Не запускаем для ясности демонстрации
-#endif
+
 
     }
     catch (exception ex) {
         wcout << L"\n✗ Произошла ошибка: " << ex.what() << endl;
-        // Пытаемся корректно закрыть оба хранилища при ошибке
+        
         if (store1) HT::Close(store1);
         if (store2) HT::Close(store2);
     }

@@ -1,14 +1,13 @@
 ﻿#include "OS_10_2.h"
 #include <iostream>
 
-#define CREATION_ENABLED
-//#define OPENING_ENABLED
-#define INSERTION_ENABLED
-#define DELETION_ENABLED
+//#define CREATION_ENABLED
+#define OPENING_ENABLED
+//#define INSERTION_ENABLED
+//#define DELETION_ENABLED
 #define CLOSURE_ENABLED
 #define GET_ENABLED
 #define UPDATE_ENABLED
-#define EXECUTION_ENABLED
 using namespace std;
 
 
@@ -118,10 +117,7 @@ int main() {
 			cout << "--НЕ УДАЛОСЬ ЗАКРЫТЬ ХРАНИЛИЩЕ--" << endl;
 		}
 #endif // CLOSURE_ENABLED
-#ifdef EXECUTION_ENABLED
 
-		HT::ExecuteHT();
-#endif // EXECUTION_ENABLED
 
 
 	}

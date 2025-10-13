@@ -1,6 +1,7 @@
 #pragma once
-#pragma once
 #include <Windows.h>
+#include "pch.h"
+
 
 namespace HT    // HT API
 {
@@ -33,7 +34,15 @@ namespace HT    // HT API
 		LPVOID  Addr;                   // Addr != NULL, если mapview выполнен  
 		char    LastErrorMessage[512];  // сообщение об последней ошибке или 0x00  
 		time_t  lastsnaptime;			// дата последнего snap'a (time())  
-		int CurrentElements = 0;            //Added: the number of elements in a storage
+		int CurrentElements = 0;        // текущее количество элементов в хэш-таблице   
+		HANDLE snapshotTimer;			// таймер дл€ snapshot
+		HANDLE mutex;					// mutex дл€ синхронизации нескольких экземпл€ров HtHandle
+		HANDLE hSnapshotThread;       // дескриптор потока снепшотов
+		HANDLE hStopEvent;           // событие дл€ остановки потока
+		CRITICAL_SECTION cs;         // критическа€ секци€ дл€ синхронизации CRUD операций
+		bool isSnapshotRunning;      // флаг работы потока
+		volatile LONG snapshotInProgress; // флаг что снепшот выполн€етс€
+
 
 	};
 
@@ -90,14 +99,14 @@ namespace HT    // HT API
 
 	Element* Get     //  читать элемент в хранилище
 	(
-		const HTHANDLE* hthandle,            // управление HT
+		HTHANDLE* hthandle,            // управление HT
 		const Element* element              // элемент 
 	); 	//  != NULL успешное завершение 
 
 
 	BOOL Update     //  именить элемент в хранилище
 	(
-		const HTHANDLE* hthandle,            // управление HT
+		HTHANDLE* hthandle,            // управление HT
 		const Element* oldelement,          // старый элемент (ключ, размер ключа)
 		const void* newpayload,          // новые данные  
 		int             newpayloadlength     // размер новых данных
@@ -113,7 +122,20 @@ namespace HT    // HT API
 		const Element* element              // элемент 
 	);
 
-
+	void CALLBACK snapAsync // выполнить асинхронный снимок HT
+	(
+		LPVOID,
+		DWORD,
+		DWORD
+	);
+	BOOL runSnapshotTimer //запустить таймер снэпшотов
+	(
+		HTHANDLE* htHandle // управление HT
+	);
+	void StartSnapshotThread(HTHANDLE* ht);
+	void StopSnapshotThread(HTHANDLE* ht);
+	void StopSnapshotThread(HTHANDLE* ht);
+	DWORD WINAPI SnapshotThreadFunction(LPVOID lpParam);
 	void ExecuteHT();
 
 

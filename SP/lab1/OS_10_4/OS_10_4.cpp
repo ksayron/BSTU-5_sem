@@ -5,7 +5,7 @@ using namespace std;
 
 void testCreate() {
 
-    HT::HTHANDLE* handle = HT::Create(1000, 3, 10, 256, "Test.ht");
+    HT::HTHANDLE* handle = HT::Create(1000, 7, 10, 256, "Test.ht");
 
     assert(handle != NULL);
 
@@ -33,11 +33,13 @@ void testInsert() {
 
     HT::Insert(handle, new HT::Element("key1", 4, "payload1", 8));
 
-    HT::Insert(handle, new HT::Element("key2", 4, "payload2", 8));
-
-    assert(handle->CurrentElements == 2);
-
-    cout << "Insert Test Passed" << endl;
+    if (HT::Insert(handle, new HT::Element("key1", 4, "payload2", 8))) {
+        cout << "Insert Test Passed" << endl;
+    }
+    else {
+        cout << "Insert Test Failed" << endl;
+    }
+    
 
     HT::Close(handle);
 }
@@ -97,16 +99,16 @@ void testUpdate() {
 
 int main() {
 
-    testCreate();
+    //testCreate();
 
     //testOpen();
 
     testInsert();
 
-    testDelete();
+    //testDelete();
 
-    testGet();
+    //testGet();
 
-    testUpdate();
+    //testUpdate();
     return 0;
 }

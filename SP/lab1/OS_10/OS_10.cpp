@@ -1,128 +1,106 @@
 ﻿#include "HT.h"
 #include <iostream>
-
 #define CREATION_ENABLED
 //#define OPENING_ENABLED
 #define INSERTION_ENABLED
 #define DELETION_ENABLED
 #define CLOSURE_ENABLED
 #define GET_ENABLED
+#define ASYNC_ENABLED
 #define UPDATE_ENABLED
-#define EXECUTION_ENABLED
 using namespace std;
 
 
 int main() {
-	setlocale(LC_ALL, "rus");
 	HT::HTHANDLE* handle = nullptr;
 	try {
 
 
 #ifdef CREATION_ENABLED
-		wcout << L"\n--- СОЗДАНИЕ ХРАНИЛИЩА ---" << endl;
-		handle = HT::Create(1000, 3, 10, 256, "Test.ht");
+		handle = HT::Create(40, 1, 10, 256, "Test.ht");
 
 		if (handle == NULL) {
-			wcout << L"Ошибка: Не удалось создать хранилище" << endl;
-			return 1;
+			cout << "--Failed To Create Or Open An HT-Storage--" << endl;
 		}
 		else {
-			wcout << L"Максимальное количество элементов: " << handle->Capacity << endl;
+			cout << "--Storage Created Successfully--" << endl;
 		}
 
 
+		cout << endl << "----------Creation Ended----------" << endl;
 
 #endif // CREATION_ENABLED
 
 
 
 #ifdef OPENING_ENABLED
-		wcout << L"\n--- ОТКРЫТИЕ ХРАНИЛИЩА ---" << endl;
 		handle = HT::Open("Test.ht");
-
 		if (handle == NULL) {
-			wcout << L"Ошибка: Не удалось открыть хранилище" << endl;
-			return 1;
+			cout << "--Failed to open existing HT_Storage--" << endl;
 		}
 		else {
-			wcout << L"Хранилище успешно открыта!" << endl;
-			wcout << L"Текущее количество элементов: " << handle->CurrentElements << endl;
+			cout << "--Existing HT-Storage opened successfully--" << endl;
 		}
-#endif
+		cout << endl << "----------Opening Ended----------" << endl;
+#endif // OPENING_ENABLED
 
 
 #ifdef INSERTION_ENABLED
-		wcout << L"\n--- ДОБАВЛЕНИЕ ЭЛЕМЕНТОП ---" << endl;
-		int prev = handle->CurrentElements;
-
-		HT::Insert(handle, new HT::Element("Наушники", 8, "90", 2));
-		HT::Insert(handle, new HT::Element("Барабаны", 8, "450", 3));
-		HT::Insert(handle, new HT::Element("Струны", 6, "12", 2));
-		HT::Insert(handle, new HT::Element("Колонки", 7, "160", 3));
-		HT::Insert(handle, new HT::Element("Усилитель", 9, "250", 3));
-		HT::Insert(handle, new HT::Element("Гитара", 6, "620", 3));
-		HT::Insert(handle, new HT::Element("Медиатор", 8, "5", 1));
-		HT::Insert(handle, new HT::Element("Плеер", 5, "80", 2));
-
-		wcout << L"Добавлено "<<handle->CurrentElements - prev << " элементов" << endl;
-		wcout << L"Всего элементов в базе: " << handle->CurrentElements << endl;
-#endif
+		cout << endl << "----------Insertion Started----------" << endl << endl;
+		HT::Insert(handle, new HT::Element("key", 3, "payload", 7));
+		HT::Insert(handle, new HT::Element("key1", 4, "PAYLOAD1", 8));
+		HT::Insert(handle, new HT::Element("key2", 4, "payload2", 8));
+		HT::Insert(handle, new HT::Element("key2", 4, "payload3", 8));
 
 
-#ifdef GET_ENABLED
-		wcout << L"\n--- ПОИСК ЭЛЕМЕНТА ---" << endl;
+		cout << endl << "----------Insertion Ended----------" << endl;
 
-		HT::Element* product = HT::Get(handle, new HT::Element("Гитара", 6));
-		if (product != NULL) {
-			wcout << L"Найден элемент: ";
-			HT::Print(product);
-		}
-		else {
-			wcout << L"Элемент не найден" << endl;
-		}
-#endif
+#endif // INSERTION_ENABLED
+
 #ifdef DELETION_ENABLED
-		wcout << L"\n--- УДАЛЕНИЕ ЭЛЕМЕНТА ---" << endl;
+		HT::Delete(handle, new HT::Element("key", 3));
 
-		if (HT::Delete(handle, new HT::Element("Медиатор", 5))) {
-			wcout << L"Элеемент удалён из хранилища" << endl;
-			wcout << L"Осталось элементов: " << handle->CurrentElements << endl;
+#endif // DELETION_ENABLED
+#ifdef GET_ENABLED
+		cout << endl << "----------Get Started----------" << endl << endl;
+		HT::Element* got_element = HT::Get(handle, new HT::Element("key1", 4));
+		if (got_element != NULL) {
+			cout << "--Get executed successful--" << endl;
+			HT::Print(got_element);
 		}
 		else {
-			wcout << L"Ошибка удаления элемента" << endl;
+			cout << "--Get failed to execute--" << endl;
 		}
-#endif
-#ifdef UPDATE_ENABLED
-		wcout << L"\n--- ИЗМЕНЕНИЕ ЭЛЕМЕНТА ---" << endl;
 
-		if (HT::Update(handle, new HT::Element("Барабаны", 8), "500", 3)) {
-			wcout << L"Значение элемента обновлено" << endl;
-
-			HT::Element* updated = HT::Get(handle, new HT::Element("Барабаны",8));
-			if (updated != NULL) {
-				wcout << L"Новое значение: ";
-				HT::Print(updated);
-			}
+		cout << endl << "----------Get Ended----------" << endl;
+#endif // GET_ENABLED
+#ifdef UPDATE_ENABLED	
+		cout << endl << "----------Update Started----------" << endl << endl;
+		if (HT::Update(handle, new HT::Element("key1", 4), "updPayload", 10)) {
+			cout << "--Element updated successfully--" << endl;
 		}
 		else {
-			wcout << L"Ошибка изменения элемента" << endl;
+			cout << "--Element was not updated--" << endl;
 		}
+
+		cout << "----------Update Ended----------" << endl;
+#endif // UPDATE_ENABLED
+
+#ifdef ASYNC_ENABLED
+		wcout << L"\n--- SNAP WAITING ---" << endl;
+
+		SleepEx(5000, TRUE);
 #endif
 
 
 #ifdef CLOSURE_ENABLED
 		if (HT::Close(handle)) {
-			cout << "--ХРАНИЛИЩЕ ЗАКРЫТО--" << endl;
+			cout << "--Closed Successfully--" << endl;
 		}
 		else {
-			cout << "--НЕ УДАЛОСЬ ЗАКРЫТЬ ХРАНИЛИЩЕ--" << endl;
+			cout << "--Failed to Close--" << endl;
 		}
 #endif // CLOSURE_ENABLED
-#ifdef EXECUTION_ENABLED
-
-		HT::ExecuteHT();
-#endif // EXECUTION_ENABLED
-
 
 	}
 	catch (exception ex) {

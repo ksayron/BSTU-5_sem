@@ -1,24 +1,22 @@
-﻿// OS_10_2.cpp : Определяет функции для статической библиотеки.
-//
-
-#include "pch.h"
-#include "framework.h"
-#include <iostream>
+﻿#include "pch.h"
 #include "OS_10_2.h"
+#include <iostream>
 #include <mutex>
 #include <thread>
 #include <cstring>
 #include <Windows.h>
-#include <ctime>
-
+#include <cstdlib>
+#include <vector>
+#include <string>
 
 using namespace std;
+
 
 namespace HT {
 
     std::mutex ht_mutex;
 
-    // ---------------- Element ----------------
+    //default constructor
     Element::Element() :
         key(nullptr),
         keylength(0),
@@ -26,6 +24,7 @@ namespace HT {
         payloadlength(0) {
     }
 
+    //for Get operation
     Element::Element(const void* key, int keylength) :
         key(key),
         keylength(keylength),
@@ -33,21 +32,25 @@ namespace HT {
         payloadlength(0) {
     }
 
-    Element::Element(const void* key, int keylength, const void* payload, int payloadlength) :
+    //for Insert operation
+    Element::Element(const void* key, int keylength, const void* payload, int  payloadlength) :
         key(key),
         keylength(keylength),
         payload(payload),
         payloadlength(payloadlength) {
     }
 
-    Element::Element(Element* oldelement, const void* newpayload, int newpayloadlength) :
+    //for Update operation
+    Element::Element(Element* oldelement, const void* newpayload, int  newpayloadlength) :
         key(oldelement->key),
         keylength(oldelement->keylength),
         payload(newpayload),
         payloadlength(newpayloadlength) {
     }
 
-    // ---------------- HTHANDLE ----------------
+
+
+
     HTHANDLE::HTHANDLE() :
         Capacity(0),
         SecSnapshotInterval(0),
@@ -57,11 +60,18 @@ namespace HT {
         FileMapping(NULL),
         Addr(NULL),
         lastsnaptime(0),
-        CurrentElements(0) {
+        CurrentElements(0),
+        hSnapshotThread(NULL),
+        hStopEvent(NULL),
+        isSnapshotRunning(false),
+        snapshotInProgress(0)
+    {
     }
 
     HTHANDLE::HTHANDLE(int Capacity, int SecSnapshotInterval, int MaxKeyLength, int MaxPayloadLength, const char FileName[512])
-        : Capacity(Capacity),
+
+        :
+        Capacity(Capacity),
         SecSnapshotInterval(SecSnapshotInterval),
         MaxKeyLength(MaxKeyLength),
         MaxPayloadLength(MaxPayloadLength),
@@ -69,103 +79,256 @@ namespace HT {
         File(NULL),
         FileMapping(NULL),
         Addr(NULL),
-        CurrentElements(0)
+        CurrentElements(0),
+        hSnapshotThread(NULL),
+        hStopEvent(NULL),
+        isSnapshotRunning(false),
+        snapshotInProgress(0)
     {
+
         strcpy_s(this->FileName, 512, FileName);
+
+
+
     }
 
-    // ---------------- Create ----------------
     HTHANDLE* Create(int Capacity, int SecSnapshotInterval, int MaxKeyLength, int MaxPayloadLength, const char FileName[512]) {
-        lock_guard<mutex> lock(ht_mutex);
+        lock_guard<mutex>lock(ht_mutex);
 
         HTHANDLE* ht = new HTHANDLE(Capacity, SecSnapshotInterval, MaxKeyLength, MaxPayloadLength, FileName);
-        cout << "=== Создание HT-хранилища ===" << endl;
+        cout << "----------Creation Started----------" << endl << endl;
 
-        ht->File = CreateFileA(FileName,
-            GENERIC_READ | GENERIC_WRITE,
-            0,
-            NULL,
-            OPEN_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL);
+
+
+        ht->File = CreateFileA(
+            FileName,
+            GENERIC_READ | GENERIC_WRITE,//access mode:read &writes
+            0, //sharing between processes: No sharing
+            NULL, //security attributes: Default security attributes    
+            CREATE_ALWAYS, //how to open: Open if exists, else create
+            FILE_ATTRIBUTE_NORMAL,//file attribute:normal
+            NULL // No template file
+        );
 
         if (ht->File == INVALID_HANDLE_VALUE) {
-            cout << "Ошибка: не удалось создать/открыть файл (" << GetLastError() << ")" << endl;
+            cout << "--File Creation Failed(Create)-- Error: " << GetLastError() << endl;
             delete ht;
             return NULL;
         }
+        else {
+            cout << "--File Creation Successful(Create)--" << endl;
+        }
 
-        int storage_size = ht->Capacity * (ht->MaxKeyLength + ht->MaxPayloadLength);
+        DWORD fileSize = GetFileSize(ht->File, NULL);
+        if (fileSize == INVALID_FILE_SIZE) {
+            cout << "File error: " << GetLastError() << endl;
+        }
 
+
+        int slot_size = (ht->MaxKeyLength + ht->MaxPayloadLength);
+        cout << "Slot size: " << slot_size << endl;
+
+        int metadata_offset = 3 * sizeof(int);
+        cout << "Metadata offset: " << metadata_offset << endl;
+
+        cout << "Storage capacity: " << ht->Capacity << endl;
+        int storage_size = metadata_offset + (ht->Capacity * slot_size);
+        cout << "Storage size: " << storage_size << endl;
+
+
+        ht->FileMapping = CreateFileMappingA(
+            ht->File, // Handle to the file
+            NULL, //security descriptor: Default security descriptor
+            PAGE_READWRITE, //access mode: read & write
+            0, // Maximum size (higher DWORD) - responsible for more 4GB files
+            storage_size, // Maximum size (lower DWORD) responsible for less 4GB files
+            "HtMapping" //named mapping(null if not named)
+        );
+
+        if (ht->FileMapping == NULL) {
+            DWORD error = GetLastError();
+            cout << "--File Mapping Failed(Create)-- Error: " << error << endl;
+            CloseHandle(ht->File);
+            delete ht;
+            return NULL;
+        }
+        else {
+            cout << "--File Mapping Successful(Create)--" << endl;
+        }
+
+
+        ht->Addr = MapViewOfFile(
+            ht->FileMapping,//handle to file mapping
+            FILE_MAP_ALL_ACCESS, //access mode: all access
+            0, // Offset high: from the top of the file
+            0, // Offset low: from the bottom of the file
+            0 // Map the entire file
+        );
+
+        if (ht->Addr == NULL) {
+            cout << "--Failed to Map View Of File(Create)-- Error: " << GetLastError() << endl;
+            CloseHandle(ht->FileMapping);
+            CloseHandle(ht->File);
+            delete ht;
+            return NULL;
+        }
+        else {
+            cout << "--MapViewOfFile successful(Create)--" << endl;
+        }
+
+
+        memcpy(ht->Addr, &Capacity, sizeof(int));
+
+        memcpy(static_cast<char*>(ht->Addr) + sizeof(int), &MaxKeyLength, sizeof(int));
+
+        memcpy(static_cast<char*>(ht->Addr) + 2 * sizeof(int), &MaxPayloadLength, sizeof(int));
+
+       
+        InitializeCriticalSection(&ht->cs);
+        ht->hStopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+
+
+        if (SecSnapshotInterval > 0) {
+            StartSnapshotThread(ht);
+        }
+
+
+
+
+        return ht;
+    }
+    void StartSnapshotThread(HTHANDLE* ht) {
+        if (ht->isSnapshotRunning) {
+            std::cout << "Поток снепшотов уже запущен" << std::endl;
+            return;
+        }
+
+        ht->hSnapshotThread = CreateThread(
+            NULL,
+            0,
+            SnapshotThreadFunction,
+            ht,
+            0,
+            NULL
+        );
+
+        if (ht->hSnapshotThread) {
+            ht->isSnapshotRunning = true;
+            std::cout << "Поток снепшотов запущен" << std::endl;
+        }
+        else {
+            cout << "Не удалось создать поток снепшотов" << GetLastError() << endl;
+            CloseHandle(ht->FileMapping);
+            CloseHandle(ht->File);
+            delete ht;
+
+        }
+    }
+
+
+    void StopSnapshotThread(HTHANDLE* ht) {
+        if (!ht->isSnapshotRunning) return;
+
+        std::cout << "Остановка потока снепшотов..." << std::endl;
+
+       
+        SetEvent(ht->hStopEvent);
+
+        
+        WaitForSingleObject(ht->hSnapshotThread, 5000);
+
+        CloseHandle(ht->hSnapshotThread);
+        ht->hSnapshotThread = NULL;
+        ht->isSnapshotRunning = false;
+
+        std::cout << "Поток снепшотов остановлен" << std::endl;
+    }
+
+
+    HTHANDLE* Open(const char FileName[512]) {
+        cout << "----------Opening Started----------" << endl << endl;
+
+        lock_guard<mutex>lock(ht_mutex);
+        HTHANDLE* ht = new HTHANDLE();
+        ht->File = CreateFileA(
+            FileName,
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            OPEN_EXISTING,//this is the only difference in a parameters of CreateFileA function. here we hope that there is a file with FileName and try to open it
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
+        if (ht->File == INVALID_HANDLE_VALUE) {
+            cout << "--File Creation Failed(Open)--" << endl;
+            delete ht;
+            return NULL;
+        }
+        else {
+            cout << "--File Creation Successful(Open)--" << endl;
+        }
         ht->FileMapping = CreateFileMappingA(
             ht->File,
             NULL,
             PAGE_READWRITE,
             0,
-            storage_size,
-            "HtMapping");
-
-        if (ht->FileMapping == NULL) {
-            cout << "Ошибка: не удалось создать FileMapping (" << GetLastError() << ")" << endl;
-            CloseHandle(ht->File);
-            delete ht;
-            return NULL;
-        }
-
-        ht->Addr = MapViewOfFile(ht->FileMapping, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-        if (ht->Addr == NULL) {
-            cout << "Ошибка: не удалось отобразить файл в память (" << GetLastError() << ")" << endl;
-            CloseHandle(ht->FileMapping);
-            CloseHandle(ht->File);
-            delete ht;
-            return NULL;
-        }
-
-        cout << "Хранилище успешно создано." << endl;
-        return ht;
-    }
-
-    // ---------------- Open ----------------
-    HTHANDLE* Open(const char FileName[512]) {
-        cout << "=== Открытие HT-хранилища ===" << endl;
-        HTHANDLE* ht = new HTHANDLE();
-
-        ht->File = CreateFileA(FileName,
-            GENERIC_READ | GENERIC_WRITE,
             0,
-            NULL,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL);
-
-        if (ht->File == INVALID_HANDLE_VALUE) {
-            cout << "Ошибка: не удалось открыть файл (" << GetLastError() << ")" << endl;
-            delete ht;
-            return NULL;
-        }
-
-        ht->FileMapping = CreateFileMappingA(ht->File, NULL, PAGE_READWRITE, 0, 0, "HtMapping");
+            "SharedHTMapping"
+        );
         if (ht->FileMapping == NULL) {
-            cout << "Ошибка: не удалось открыть FileMapping (" << GetLastError() << ")" << endl;
+            cout << "--File Mapping Failed(Open)--" << endl;
             CloseHandle(ht->File);
             delete ht;
             return NULL;
         }
+        else {
+            cout << "--File Mapping Successful(Open)--" << endl;
+        }
 
-        ht->Addr = MapViewOfFile(ht->FileMapping, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+        ht->Addr = MapViewOfFile(
+            ht->FileMapping,
+            FILE_MAP_ALL_ACCESS,
+            0,
+            0,
+            0
+        );
         if (ht->Addr == NULL) {
-            cout << "Ошибка: не удалось отобразить файл (" << GetLastError() << ")" << endl;
+            cout << "--Map View Of File Failed(Open)--" << endl;
             CloseHandle(ht->FileMapping);
             CloseHandle(ht->File);
             delete ht;
             return NULL;
         }
+        else {
+            cout << "--Map View Of File Successful(Open)--" << endl;
+        }
 
-        cout << "Хранилище успешно открыто." << endl;
+        memcpy(&ht->Capacity, ht->Addr, sizeof(int));
+        memcpy(&ht->MaxKeyLength, static_cast<char*>(ht->Addr) + sizeof(int), sizeof(int));
+        memcpy(&ht->MaxPayloadLength, static_cast<char*>(ht->Addr) + 2 * sizeof(int), sizeof(int));
+
+        cout << "Current ht->Addr: " << ht->Addr << endl;
+
+        int slot_size = ht->MaxKeyLength + ht->MaxPayloadLength;
+        cout << "Computed slot size: " << slot_size << endl;
+
+        int metadata_offset = 3 * sizeof(int);
+
+        /* ht->Addr = static_cast<char*>(ht->Addr) + metadata_offset;*/
+        cout << "Computed ht->Addr: " << ht->Addr << endl;
+
+        int total_mem = slot_size * ht->Capacity;
+        cout << "Total mem: " << total_mem << endl;
+
+        if (ht->SecSnapshotInterval > 0) {
+            StartSnapshotThread(ht);
+        }
+
+        cout << "Opened HT storage has " << ht->Capacity << " capacity, " << ht->MaxKeyLength << " Max key length, " << ht->MaxPayloadLength << " max payload length" << endl;
+
         return ht;
     }
 
-    // ---------------- Snap ----------------
     const char* CreateSnapshotFileName(HTHANDLE* handle) {
         static char buffer[100];
         char time_buffer[80];
@@ -188,8 +351,7 @@ namespace HT {
             return FALSE;
         }
 
-        //not needed here if the snapshot is being executed during closure procedure
-        //lock_guard<mutex>lock(ht_mutex)
+        
 
         hthandle->lastsnaptime = time(nullptr);
 
@@ -252,183 +414,379 @@ namespace HT {
 
     }
 
-    // ---------------- Close ----------------
-    BOOL Close(HTHANDLE* hthandle) {
+    BOOL snapAsync(HTHANDLE* hthandle)
+    {
         if (!hthandle) return FALSE;
-        lock_guard<mutex>lock(ht_mutex);
-        Snap(hthandle);
 
-        if (hthandle->Addr) UnmapViewOfFile(hthandle->Addr);
-        if (hthandle->FileMapping) CloseHandle(hthandle->FileMapping);
-        if (hthandle->File) CloseHandle(hthandle->File);
+        // Пытаемся захватить критическую секцию с таймаутом
+        DWORD lockResult = TryEnterCriticalSection(&hthandle->cs);
 
-        cout << "Хранилище закрыто." << endl;
-        delete hthandle;
-        return TRUE;
-    }
+        if (lockResult == 0) {
 
-    // ---------------- Insert ----------------
-    BOOL Insert(HTHANDLE* hthandle, const Element* element) {
-        if (!hthandle || !hthandle->Addr || !element || !element->key || !element->payload)
+            std::cout << "Snapshot delyed" << std::endl;
             return FALSE;
+        }
 
-        if (hthandle->CurrentElements >= hthandle->Capacity) return FALSE;
 
-        char* base = static_cast<char*>(hthandle->Addr) +
-            hthandle->CurrentElements * (hthandle->MaxKeyLength + hthandle->MaxPayloadLength);
+        InterlockedIncrement(&hthandle->snapshotInProgress);
+        BOOL result = Snap(hthandle);
 
-        memcpy(base, element->key, element->keylength);
-        memset(base + element->keylength, 0, hthandle->MaxKeyLength - element->keylength);
+        InterlockedDecrement(&hthandle->snapshotInProgress);
+        LeaveCriticalSection(&hthandle->cs);
 
-        memcpy(base + hthandle->MaxKeyLength, element->payload, element->payloadlength);
-        memset(base + hthandle->MaxKeyLength + element->payloadlength, 0,
-            hthandle->MaxPayloadLength - element->payloadlength);
+        if (result) {
+            std::cout << "Async snap success" << std::endl;
+        }
+        else {
+            std::cout << "Async snap error: "
+                << hthandle->LastErrorMessage << std::endl;
+        }
 
-        hthandle->CurrentElements++;
-        cout << "Элемент вставлен." << endl;
-        return TRUE;
+        return result;
     }
+    DWORD WINAPI SnapshotThreadFunction(LPVOID lpParam) {
+        HTHANDLE* hthandle = static_cast<HTHANDLE*>(lpParam);
 
-    // ---------------- Delete ----------------
-    BOOL Delete(HTHANDLE* hthandle, const Element* element) {
-        if (!hthandle || !hthandle->Addr || !element || !element->key) return FALSE;
+        std::cout << "Snapshot thread started. Snap interval: "
+            << hthandle->SecSnapshotInterval << " sec." << std::endl;
 
-        size_t slot = hthandle->MaxKeyLength + hthandle->MaxPayloadLength;
-        int index = -1;
+        while (true) {
+            // Ждем указанный интервал или событие остановки
+            DWORD waitResult = WaitForSingleObject(
+                hthandle->hStopEvent,
+                hthandle->SecSnapshotInterval * 1000
+            );
 
-        for (int i = 0; i < hthandle->CurrentElements; i++) {
-            char* base = static_cast<char*>(hthandle->Addr) + i * slot;
-            if (memcmp(base, element->key, element->keylength) == 0) {
-                index = i;
+            if (waitResult == WAIT_OBJECT_0) {
+                std::cout << "Snapshot thread recieved stop" << std::endl;
                 break;
             }
+
+
+            if (waitResult == WAIT_TIMEOUT) {
+
+                if (hthandle->CurrentElements > 0) {
+                    snapAsync(hthandle);
+                }
+            }
         }
 
-        if (index == -1) return FALSE;
+        std::cout << "Snapshot thread stopped" << std::endl;
+        return 0;
+    }
 
-        for (int i = index; i < hthandle->CurrentElements - 1; i++) {
-            char* dst = static_cast<char*>(hthandle->Addr) + i * slot;
-            char* src = static_cast<char*>(hthandle->Addr) + (i + 1) * slot;
-            memcpy(dst, src, slot);
+    BOOL Close(HTHANDLE* hthandle) {
+
+        if (!hthandle) {
+            cout << "--Close:Failed To Close(Invalid handle)--" << " Error: " << GetLastError() << endl;
+            return FALSE;
+        }
+        if (hthandle->SecSnapshotInterval > 0) {
+            StopSnapshotThread(hthandle);
+        }
+        lock_guard<mutex>lock(ht_mutex);
+
+        if (Snap(hthandle)) {
+            cout << "--Close:Snapshot taken--" << endl;
+        }
+        else {
+            cout << "--Closing:Failed To Take a Snapshot--" << " Error: " << GetLastError() << endl;
+            return FALSE;
         }
 
-        hthandle->CurrentElements--;
-        cout << "Элемент удалён." << endl;
+        if (hthandle->Addr != NULL) {
+            UnmapViewOfFile(hthandle->Addr);
+            cout << "--Close: Unmapped View Of File--" << endl;
+        }
+        if (hthandle->FileMapping != NULL) {
+            CloseHandle(hthandle->FileMapping);
+            cout << "--Close: File Mapping Handle Closed--" << endl;
+        }
+        if (hthandle->File != NULL) {
+            BOOL result = CloseHandle(hthandle->File);
+            if (!result) {
+                cout << "--Close:Failed To Close The File Handle--" << GetLastError() << endl;
+                return FALSE;
+            }
+        }
+        cout << "--Close:File Handle Closed Successfully--" << endl;
+
         return TRUE;
     }
 
-    // ---------------- Get ----------------
-    Element* Get(const HTHANDLE* hthandle, const Element* element) {
-        if (!hthandle || !hthandle->Addr || !element || !element->key) return NULL;
 
-        size_t slot = hthandle->MaxKeyLength + hthandle->MaxPayloadLength;
+    //using classical DJB2 algorithm
 
-        for (int i = 0; i < hthandle->CurrentElements; i++) {
-            char* base = static_cast<char*>(hthandle->Addr) + i * slot;
-            if (memcmp(base, element->key, element->keylength) == 0) {
-                return new Element(base, element->keylength, base + hthandle->MaxKeyLength, hthandle->MaxPayloadLength);
-            }
+    int hashFunction(const void* key, int keyLength, int capacity) {
+        int hash = 5381;
+
+
+        const char* str = static_cast<const char*>(key);
+
+        for (int i = 0; i < keyLength; ++i) {
+
+
+            hash = ((hash << 5) + hash) + str[i];
+
         }
-        return NULL;
+
+        cout << "--Hash: current Hash value: " << hash << endl;
+
+
+        return abs(hash % capacity);
     }
 
-    // ---------------- Update ----------------
-    BOOL Update(const HTHANDLE* hthandle, const Element* oldelement, const void* newpayload, int newpayloadlength) {
-        if (!hthandle || !hthandle->Addr || !oldelement || !oldelement->key || !newpayload) return FALSE;
-        if (newpayloadlength > hthandle->MaxPayloadLength) return FALSE;
 
-        size_t slot = hthandle->MaxKeyLength + hthandle->MaxPayloadLength;
+    BOOL Insert(HTHANDLE* hthandle, const Element* element) {
 
-        for (int i = 0; i < hthandle->CurrentElements; i++) {
-            char* base = static_cast<char*>(hthandle->Addr) + i * slot;
-            if (memcmp(base, oldelement->key, oldelement->keylength) == 0) {
-                memcpy(base + hthandle->MaxKeyLength, newpayload, newpayloadlength);
-                memset(base + hthandle->MaxKeyLength + newpayloadlength, 0,
-                    hthandle->MaxPayloadLength - newpayloadlength);
-                cout << "Элемент обновлён." << endl;
+        if (hthandle == NULL) {
+            cout << "--Insert: Failed to insert(Invalid handle)--" << " Error: " << GetLastError() << endl;
+            return FALSE;
+        }
+        else if (element == NULL) {
+            cout << "--Insert: Failed to insert(Invalid element)--" << " Error: " << GetLastError() << endl;
+            return FALSE;
+        }
+        else if (hthandle->Addr == NULL) {
+            cout << "--Insert: Failed to insert(Address was null)" << endl;
+            return FALSE;
+        }
+
+        if (hthandle->CurrentElements >= hthandle->Capacity) {
+            cout << "--Insert: Failed to insert(attempted to exceed the handle capacity)--" << endl;
+            return FALSE;
+        }
+
+        if (element->keylength > hthandle->MaxKeyLength) {
+            cout << "--Insert: Failed to insert(Element's key length is too big)--" << endl;
+            return FALSE;
+        }
+
+        if (element->payloadlength > hthandle->MaxPayloadLength) {
+            cout << "--Insert: Failed to insert(Element's payload length is too big)--" << endl;
+            return FALSE;
+        }
+        if (element->keylength == NULL) {
+            cout << "--Insert: Failed to insert(key length was NULL)" << endl;
+            return FALSE;
+        }
+        if (element->payloadlength == NULL) {
+            cout << "--Insert: Failed to insert(payload length was NULL)" << endl;
+            return FALSE;
+        }
+
+        const int metadata_offset = 3 * sizeof(int);
+        const int slot_size = hthandle->MaxKeyLength + hthandle->MaxPayloadLength;
+        int hash_index = hashFunction(element->key, element->keylength, hthandle->Capacity);
+
+        cout << "--Insert: initial hash index: " << hash_index << endl;
+
+        char* base = static_cast<char*>(hthandle->Addr) + metadata_offset;
+
+
+        for (int probe = 0; probe < hthandle->Capacity; ++probe) {
+            char* slot_key = base + (hash_index * slot_size);
+
+            bool is_empty = true;
+
+            for (int k = 0; k < hthandle->MaxKeyLength; ++k) {
+                if (slot_key[k] != 0) { is_empty = false; break; }
+            }
+
+            if (is_empty) {
+
+                memcpy(slot_key, element->key, element->keylength);
+                if (element->keylength < hthandle->MaxKeyLength) {
+                    memset(slot_key + element->keylength, 0, hthandle->MaxKeyLength - element->keylength);
+                }
+
+                char* payload_area = slot_key + hthandle->MaxKeyLength;
+                memcpy(payload_area, element->payload, element->payloadlength);
+                if (element->payloadlength < hthandle->MaxPayloadLength) {
+                    memset(payload_area + element->payloadlength, 0, hthandle->MaxPayloadLength - element->payloadlength);
+                }
+
+                hthandle->CurrentElements++;
+                cout << "--Insert: inserted at index " << hash_index << endl;
                 return TRUE;
             }
+
+            if (memcmp(slot_key, element->key, sizeof(element->key)) == 0) {
+                cout << "--Insert: Cannot insert elements with identical keys" << endl;
+                return FALSE;
+            }
+
+            hash_index = (hash_index + 1) % hthandle->Capacity;
         }
+
+        cout << "--Insert: no free slot found--" << endl;
         return FALSE;
     }
 
-    // ---------------- GetLastErrorMsg ----------------
-    char* GetLastErrorMsg(HTHANDLE* ht) {
-        return ht ? ht->LastErrorMessage : (char*)"HTHANDLE не найден";
+
+    BOOL Delete(HTHANDLE* handle, const Element* element) {
+
+
+        cout << endl << "----------Deletion Started----------" << endl << endl;
+        if (handle == NULL || handle->Addr == NULL) {
+            cout << "--Delete: Failed to delete an element(handle was invalid)--" << endl;
+            return FALSE;
+        }
+
+        if (element == NULL || element->keylength == NULL) {
+            cout << "--Delete: Failed to delete an element(element was invalid)--" << endl;
+            return FALSE;
+        }
+
+        std::lock_guard<std::mutex> lock(ht_mutex);
+
+        const size_t slot_size = handle->MaxKeyLength + handle->MaxPayloadLength;
+        const int metadata_offset = 3 * sizeof(int);
+        char* base = static_cast<char*>(handle->Addr) + metadata_offset;
+
+        int index_to_delete = -1;
+
+        for (int i = 0; i < handle->Capacity; ++i) {
+            char* current_slot = base + (i * slot_size);
+
+            bool slot_empty = true;
+            for (int k = 0; k < handle->MaxKeyLength; ++k) {
+                if (current_slot[k] != 0) {
+                    slot_empty = false;
+                    break;
+                }
+            }
+            if (slot_empty) {
+                continue;
+            }
+
+            if (element->keylength <= handle->MaxKeyLength && memcmp(current_slot, element->key, element->keylength) == 0) {
+                index_to_delete = i;
+                break;
+            }
+        }
+
+        if (index_to_delete == -1) {
+            cout << "--Delete: Failed to delete an element (element not found)--" << endl;
+            return FALSE;
+        }
+
+        for (int i = index_to_delete + 1; i < handle->CurrentElements; ++i) {
+            char* src_location = base + (i * slot_size);
+            char* dest_location = base + ((i - 1) * slot_size);
+            memcpy(dest_location, src_location, slot_size);
+        }
+
+
+        handle->CurrentElements--;
+
+        cout << "Delete: Successfully deleted an element with key: " << static_cast<const char*>(element->key) << endl;
+        cout << "----------Deletion Ended----------" << endl;
+
+        return TRUE;
     }
 
-    // ---------------- Print ----------------
+    Element* Get(HTHANDLE* handle, const Element* element) {
+
+        if (handle == NULL || handle->Addr == NULL) {
+            cout << "--Get: Failed to get an element(handle was invalid)--" << endl;
+            return NULL;
+        }
+
+        if (element == NULL || element->keylength == NULL) {
+            cout << "--Get: Failed to get an element(element was invalid)--" << endl;
+            return NULL;
+        }
+        lock_guard<mutex>lock(ht_mutex);
+        int offset = 3 * sizeof(int);
+        size_t slot_size = handle->MaxKeyLength + handle->MaxPayloadLength;
+        char* base = static_cast<char*>(handle->Addr) + offset;
+
+        for (int i = 0; i < handle->Capacity; ++i) {
+
+            char* current_slot = base + (i * slot_size);
+
+            bool is_empty = true;
+
+            for (int j = 0; j < handle->MaxKeyLength; ++j) {
+                if (current_slot[j] != 0) {
+                    is_empty = false;
+                    break;
+                }
+            }
+
+            if (is_empty) {
+                continue;
+            }
+
+            if (memcmp(current_slot, element->key, element->keylength) == 0) {
+                Element* found = new Element(
+                    current_slot,
+                    element->keylength,
+                    current_slot + handle->MaxKeyLength,
+                    handle->MaxPayloadLength
+                );
+
+                return found;
+            }
+        }
+        cout << "--Get: Element not found--" << endl;
+        return NULL;
+    }
+
+
     void Print(const Element* element) {
-        cout << "Ключ: " << (const char*)element->key
-            << " | Значение: " << (const char*)element->payload << endl;
+        cout << "Key: " << static_cast<const char*>(element->key) << " Payload: " << static_cast<const char*>(element->payload) << endl;
     }
 
-    // ---------------- ExecuteHT ----------------
-    void ExecuteHT() {
-        HTHANDLE* handle = nullptr;
-        int choice;
+    BOOL Update(HTHANDLE* handle, const Element* element, const void* newpayload, int newpayloadlength) {
 
-        do {
-            cout << "\n=== Меню HT ===\n"
-                << "1. Создать\n"
-                << "2. Открыть\n"
-                << "3. Вставить\n"
-                << "4. Найти\n"
-                << "5. Обновить\n"
-                << "6. Удалить\n"
-                << "7. Snapshot\n"
-                << "8. Закрыть\n"
-                << "0. Выход\n"
-                << "Ваш выбор: ";
-            cin >> choice;
+        if (handle == NULL || handle->Addr == NULL) {
+            cout << "--Update: Failed to update an element(handle was invalid)--" << endl;
+            return FALSE;
+        }
 
-            switch (choice) {
-            case 1:
-                handle = Create(100, 3, 16, 256, "Test.ht");
-                break;
-            case 2:
-                handle = Open("Test.ht");
-                break;
-            case 3: {
-                char key[16], value[256];
-                cout << "Ключ: "; cin >> key;
-                cout << "Значение: "; cin >> value;
-                Element el(key, strlen(key) + 1, value, strlen(value) + 1);
-                Insert(handle, &el);
-                break;
+        if (element == NULL || element->keylength == NULL) {
+            cout << "--Update: Failed to update an element(element was invalid)--" << endl;
+            return FALSE;
+        }
+
+        if (newpayload == NULL || newpayloadlength == NULL || newpayloadlength > handle->MaxPayloadLength) {
+            cout << "--Update: Failed to update an element(data to update were invalid)--" << endl;
+            return FALSE;
+        }
+
+        lock_guard<mutex>lock(ht_mutex);
+
+        size_t slot_size = handle->MaxKeyLength + handle->MaxPayloadLength;
+        int metadata_offset = 3 * sizeof(int);
+        char* base = static_cast<char*>(handle->Addr) + metadata_offset;
+
+        for (int i = 0; i < handle->Capacity; ++i) {
+            char* current_slot = base + (i * slot_size);
+
+            bool is_empty = true;
+            for (int j = 0; j < handle->MaxKeyLength; ++j) {
+                if (current_slot[j] != 0) {
+                    is_empty = false;
+                    break;
+                }
             }
-            case 4: {
-                char key[16];
-                cout << "Ключ: "; cin >> key;
-                Element el(key, strlen(key) + 1);
-                Element* res = Get(handle, &el);
-                if (res) Print(res); else cout << "Элемент не найден." << endl;
-                break;
+
+            if (is_empty) {
+                continue;
             }
-            case 5: {
-                char key[16], value[256];
-                cout << "Ключ: "; cin >> key;
-                cout << "Новое значение: "; cin >> value;
-                Element oldel(key, strlen(key) + 1);
-                Update(handle, &oldel, value, strlen(value) + 1);
-                break;
+
+            if (memcmp(current_slot, element->key, element->keylength) == 0) {
+                memcpy(current_slot + handle->MaxKeyLength, newpayload, newpayloadlength);
+                cout << "--Update: Element updated--" << endl;
+                return TRUE;
             }
-            case 6: {
-                char key[16];
-                cout << "Ключ: "; cin >> key;
-                Element el(key, strlen(key) + 1);
-                Delete(handle, &el);
-                break;
-            }
-            case 7:
-                Snap(handle);
-                break;
-            case 8:
-                Close(handle);
-                handle = nullptr;
-                break;
-            }
-        } while (choice != 0);
+        }
+
+        cout << "--Update: Failed to update(element not found)--" << endl;
+        return FALSE;
+
+
     }
-
 }

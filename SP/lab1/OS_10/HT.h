@@ -1,6 +1,8 @@
 #pragma once
 #include <Windows.h>
 
+
+
 namespace HT    // HT API
 {
 	// API HT - программный интерфейс для доступа к НТ-хранилищу 
@@ -32,10 +34,14 @@ namespace HT    // HT API
 		LPVOID  Addr;                   // Addr != NULL, если mapview выполнен  
 		char    LastErrorMessage[512];  // сообщение об последней ошибке или 0x00  
 		time_t  lastsnaptime;			// дата последнего snap'a (time())  
-		int CurrentElements = 0;            //Added: the number of elements in a storage
-		HANDLE hSnapshotThread;      
-		HANDLE hStopEvent;           
-		bool isSnapshotRunning;      
+		int CurrentElements = 0;        // текущее количество элементов в хэш-таблице   
+		HANDLE snapshotTimer;			// таймер для snapshot
+		HANDLE mutex;					// mutex для синхронизации нескольких экземпляров HtHandle
+		HANDLE hSnapshotThread;       // дескриптор потока снепшотов
+		HANDLE hStopEvent;           // событие для остановки потока
+		CRITICAL_SECTION cs;         // критическая секция для синхронизации CRUD операций
+		bool isSnapshotRunning;      // флаг работы потока
+		volatile LONG snapshotInProgress; // флаг что снепшот выполняется
 
 
 	};
@@ -116,7 +122,20 @@ namespace HT    // HT API
 		const Element* element              // элемент 
 	);
 
-
+	void CALLBACK snapAsync // выполнить асинхронный снимок HT
+	(
+		LPVOID, 
+		DWORD,
+		DWORD
+	);
+	BOOL runSnapshotTimer //запустить таймер снэпшотов
+	(
+		HTHANDLE* htHandle // управление HT
+	);
+	void StartSnapshotThread(HTHANDLE* ht);
+	void StopSnapshotThread(HTHANDLE* ht);
+	void StopSnapshotThread(HTHANDLE* ht);
+	DWORD WINAPI SnapshotThreadFunction(LPVOID lpParam);
 	void ExecuteHT();
 
 
