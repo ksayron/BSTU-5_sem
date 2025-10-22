@@ -1,18 +1,18 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
 
 public class plainSpawn : MonoBehaviour
 {
 
     public float spawnPointY = 4;
 
-    public float tiltAngle = 30f;       // угол наклона вокруг локальной оси Z (в градусах)
-    public float tiltDuration = 0.8f;   // время поворота в секунды
-    public float tiltHoldTime = 2f;     // как долго держать наклон (чтобы кубы съехали)
+    public float tiltAngle = 30f;       
+    public float tiltDuration = 0.8f;   
+    public float tiltHoldTime = 2f;     
 
 
-    public GameObject spawnedCapsule;
     public GameObject spawnedSphere;
 
     private Renderer _planeRenderer;
@@ -27,13 +27,19 @@ public class plainSpawn : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Q))
         {
-            Debug.Log("qqq");
-            var spawnPos = GetSpawnPoint();
-            Instantiate(spawnedCapsule, spawnPos, Quaternion.identity);
+            GameObject capsule = GameObject.CreatePrimitive(PrimitiveType.Cube); 
+            capsule.transform.position = GetSpawnPoint();
+
+            Rigidbody rb = capsule.AddComponent<Rigidbody>(); 
+            rb.mass = 1f;
+
+            var rend = capsule.GetComponent<Renderer>();
+            rend.material = new Material(Shader.Find("Lit"));
         }
         if (Input.GetKeyDown(KeyCode.Space))
         {
             var spawnPos = GetSpawnPoint();
+            
             Instantiate(spawnedSphere, spawnPos, Quaternion.identity);
         }
         if (Input.GetKeyDown(KeyCode.W) && !_isTilting)
