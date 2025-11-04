@@ -1,0 +1,14 @@
+﻿<?xml version="1.0"?>
+<package>
+	<metadata>
+		<id>BSTU.Results.Collection</id>
+		<version>1.0.0</version>
+		<authors>Smelov</authors>
+		<owners>Smelov</owners>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>results collection service</description>
+		<dependencies>
+			<dependency id="System.Text.Json" version="13.0.3" />
+		</dependencies>
+	</metadata>
+</package>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BSTU.Results.Authenticate" Version="1.0.2" />
+    <PackageReference Include="BSTU.Results.Collection" Version="1.0.4" />
+    <PackageReference Include="Microsoft.AspNet.Identity.EntityFramework" Version="2.2.4" Source="https://api.nuget.org/v3/index.json" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.21" Source="https://api.nuget.org/v3/index.json" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" Source="https://api.nuget.org/v3/index.json" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.10" Source="https://api.nuget.org/v3/index.json" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" Source="https://api.nuget.org/v3/index.json" />
+  </ItemGroup>
+
+</Project>

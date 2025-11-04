@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<PackageId>BSTU.Results.Authenticate</PackageId>
+		<Version>1.0.2</Version>
+		<Authors>Manmad</Authors>
+		<Description>A library for Cookie authentification.</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1"  Source="https://api.nuget.org/v3/index.json"/>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" Source="https://api.nuget.org/v3/index.json"/>
+		<PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.10" Source="https://api.nuget.org/v3/index.json"/>
+		<PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="9.0.10" Source="https://api.nuget.org/v3/index.json"/>
+	</ItemGroup>
+
+</Project>

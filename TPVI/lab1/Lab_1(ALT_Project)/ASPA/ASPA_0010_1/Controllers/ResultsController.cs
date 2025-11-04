@@ -1,0 +1,114 @@
+﻿using ASPA_0010_1.Models;
+using BSTU.Results.Authenticate.Services;
+using BSTU.Results.Collection.Models;
+using BSTU.Results.Collection.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ASPA_0010_1.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ResultsController : ControllerBase
+    {
+        private readonly ResultsService _resultsService;
+        private readonly AuthenticationService _authenticationService;
+        public ResultsController(ResultsService resultsService, AuthenticationService authenticationService)
+        {
+            _resultsService = resultsService;
+            _authenticationService = authenticationService;
+        }
+
+        [HttpPost("SignIn")]
+        public async Task<ActionResult> SignIn([FromBody] UserProfile profile)
+        {
+            if (string.IsNullOrEmpty(profile.Username) || string.IsNullOrEmpty(profile.Password))
+            {
+                return BadRequest();
+            }
+            var res = await _authenticationService.SignInAsync(profile.Username, profile.Password);
+            if (!res.Succeeded)
+            {
+                return NotFound();
+            }
+            
+            return Ok(res);
+        }
+
+
+        [HttpGet("SignOut")]
+        public async Task<ActionResult> SignOut()
+        {
+            await _authenticationService.SignOut();
+            return Ok("Signed Out");
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "READER,WRITER")]
+        public ActionResult<List<Result>> Get()
+        {
+            var results =  _resultsService.GetAllSync();
+            if(results is not null)
+            {
+                if (results.Count == 0)
+                {
+                    return NoContent();
+                }
+                else
+                {
+                    return Ok(results);
+                }
+            }
+            return NotFound("Service was null");
+                
+        }
+
+        [HttpGet("{key:int}")]
+        [Authorize(Roles = "READER,WRITER")]
+        public ActionResult<Result> Get(int key)
+        {
+            var result = _resultsService.GetResultSync(key);
+            if (result != null)
+            {
+                return  Ok(result);
+            }
+
+            return NotFound("There is no such element");
+        }
+
+
+        [HttpPost]
+        [Authorize(Roles ="WRITER")]
+        public ActionResult Post([FromBody]Result result)
+        {
+            if (_resultsService.AddSync(result))
+            {
+                return CreatedAtAction(nameof(Get), result);
+            }
+            return BadRequest("Failed to add. ");
+          
+        }
+
+        [HttpPut("{key:int}")]
+        [Authorize(Roles = "WRITER")]
+        public ActionResult Put([FromQuery]int key, [FromBody]string value)
+        {
+            if ( _resultsService.UpdateSync(key, value))
+            {
+                return Ok();
+            }
+            return BadRequest();
+        }
+
+        [HttpDelete("{key:int}")]
+        [Authorize(Roles = "WRITER")]
+        public ActionResult Delete(int key)
+        {
+            if ( _resultsService.DeleteSync(key))
+            {
+                return Ok();
+            }
+            return BadRequest();
+        }
+    }
+}
