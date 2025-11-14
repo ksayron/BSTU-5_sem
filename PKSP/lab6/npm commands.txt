@@ -1,0 +1,17 @@
+1. **Получить информацию о пакете sendmail:**
+
+```bash
+npm <view | infod> sendmail
+```
+
+2. **Скачать пакет sendmail в локальный каталог:**
+
+```bash
+npm install sendmail
+```
+
+3. **Проверить, что пакет установлен:**
+
+```bash
+npm list sendmail
+```

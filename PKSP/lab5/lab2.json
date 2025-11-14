@@ -1,0 +1,80 @@
+//get--информация о канале
+{
+    "id":"GUID-идентификатор канала",
+    "name":"имя канала",
+    "state":"Состояние",//CLOSE|ACTIVE
+    "description":"Описание,назанчение"
+}
+//post --создание канала
+{
+    "command":"new",
+    "name":"имя канала",
+    "state":"Состояние",//CLOSE|ACTIVE
+    "description":"Описание,назанчение"
+}
+//put -- остановка всех каналов
+{
+    "command":"close",
+    "reason":"Причична остановки"
+}
+//put -- остановка канала по id
+{
+    "command":"close",
+    "id":"GUID-идентификатор канала",
+    "reason":"Причична остановки"
+}
+//put -- возобновление всех каналов
+{
+    "command":"open"
+}
+//put -- возобновление канала по id
+{
+    "command":"open",
+    "id":"GUID-идентификатор канала",
+    "state":"Состояние"//CLOSE|ACTIVE
+}
+//delete -- удаление всех каналов
+{
+    "command":"delete"
+}
+//delete -- удаление всех closed
+{
+    "command":"delete",
+    "state":"Close"//CLOSE|ACTIVE
+}
+//извлечение из очереди,просмотр первого
+{
+    "command":"команда",//dequeue,peek
+    "id":"GUID-идентификатор канала",
+}
+//поставить в очередь
+{
+    "command":"команда",//dequeue,peek
+    "id":"GUID-идентификатор канала",
+    "data":"json-string"
+}
+//элемент очереди
+{
+    "id":"GUID-идентификатор канала",
+    "data":"json-string"
+}
+//поставить в очередь
+{
+    "id":"GUID-идентификатор канала",
+    "error":"сообщение ошибки"
+}
+{
+    "__commment":"abc",
+    "x":"1",
+    "y":"2",
+    "s":"message",
+    "m":["a","b"],
+    "o":{"surname":"AAA","name":"BBB"}
+}
+
+{
+    "__commment":"abc",
+    "x+y":"3",
+    "concat_s+o":"message: AAA, BBB",
+    "m_size":"2"
+}

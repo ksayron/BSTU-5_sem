@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>07-01 Static demo</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <h1>Demo static files</h1>
+
+  <section>
+    <h2>Image (png)</h2>
+    <img src="/img/pic.png" alt="pic" style="max-width:300px;">
+  </section>
+
+  <section>
+    <h2>Video (mp4)</h2>
+    <video width="320" height="240" controls>
+      <source src="/video/vid.mp4" type="video/mp4">
+      Ваш браузер не поддерживает видео.
+    </video>
+  </section>
+
+  <section>
+    <h2>Document (docx)</h2>
+    <a href="/docs/doc.docx" download>doc.docx</a>
+  </section>
+
+  <section>
+    <h2>JSON and XML (fetch)</h2>
+    <button id="loadJson">Load JSON</button>
+    <pre id="jsonOut"></pre>
+
+    <button id="loadXml">Load XML</button>
+    <pre id="xmlOut"></pre>
+  </section>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
