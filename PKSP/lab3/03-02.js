@@ -21,10 +21,8 @@ const serverFunction = function (request, response) {
 
     const parsedNum = parseInt(parsedUrl.query.k);
 
-    if (request.method==="GET"&&parsedUrl.pathname==="/fact"&&!isNaN(parsedNum)) {
-       // console.log(parsedNum);
+    if (request.method === "GET" && parsedUrl.pathname === "/fact" && !isNaN(parsedNum)) {
         const processedNum = factorial(parsedNum);
-        //console.log(processedNum);
         if (processedNum != null) {
             response.writeHead(200, { 'content-type': 'application/json;charset=utf-8' });
             response.end(JSON.stringify({
@@ -32,22 +30,22 @@ const serverFunction = function (request, response) {
                 fact: processedNum
             }));
         }
-        else{
-            response.writeHead(400,{'content-type':'application/json;charset=utf-8'});
+        else {
+            response.writeHead(400, { 'content-type': 'application/json;charset=utf-8' });
             response.end(JSON.stringify({
-                error:"Factoriated number was less then 0 or not a number"
+                error: "Factoriated number was less then 0 or not a number"
             }));
         }
 
     }
-    else if(request.method==="GET"&&request.url==="/fact"){
+    else if (request.method === "GET" && request.url === "/fact") {
         let html = fs.readFileSync("./factorial.html");
 
-        response.writeHead(200,{'content-type':'text/html'});
+        response.writeHead(200, { 'content-type': 'text/html' });
         response.end(html);
     }
-    else{
-        response.writeHead(404,{'content-type':'text/html'});
+    else {
+        response.writeHead(404, { 'content-type': 'text/html' });
         response.end(
             '<h1>404 Not Found</h1>'
         );
@@ -60,7 +58,3 @@ server.listen(PORT);
 
 console.log("Server running at http://localhost:5000/fact");
 
-
-//time passed in one folder: 308ms
-//time passed in two folders: 362ms(1st folder), 373ms(2nd folder)
-//time passed in three folders: 381ms(1st folder), 364ms(2nd folder), 325ms(3rd folder)

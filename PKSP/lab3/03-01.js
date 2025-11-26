@@ -1,22 +1,12 @@
- console.log(`Server running at http://localhost:5000`);
 var http = require('http');
-const { stdin } = require('process');
-var readline = require('readline');
 
 const PORT = 5000;
 
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-})
+let state = "norm";
 
-let appState = "norm";
-
-const serverFunction = function (request, response) {
-    if (request.url === "/") {
-        response.writeHead(200, { "content-type": "text/html;charset=utf-8" });
-        response.end(
-            `<!DOCTYPE html>
+http.createServer(function (request, response) {
+      response.writeHead("200", { "Content-type": "text/html; charset=utf-8" });
+      response.end(`<!DOCTYPE html>
         <html lang="en">
             <head>
                 <meta charset="UTF-8">
@@ -24,52 +14,33 @@ const serverFunction = function (request, response) {
                 <title>03-01</title>
             </head>
             <body>
-                <h1 id="state-display">${appState}</h1>
+                <h1 id="state-display">${state}</h1>
             </body>
-        </html>`
-        );
+        </html>`);
+  })
+  .listen(5000, () => {
+    console.log("Server running at http://localhost:5000/");
+  });
+
+
+process.stdin.setEncoding("utf-8");
+process.stdin.on("readable", () => {
+  let stroka = null;
+  const states = ["norm", "stop", "idle", "exit"];
+
+  while ((stroka = process.stdin.read()) != null) {
+    let trimmedInput = stroka.trim();
+
+    if (states.includes(trimmedInput)) {
+      process.stdout.write(`${state} -> ${trimmedInput}\n`);
+
+      if (trimmedInput === "exit") {
+        process.exit(0);
+      } else {
+        state = trimmedInput;
+      }
+    } else {
+      process.stdout.write('Incorrect state: ${trimmedInput}\n');
     }
-    else {
-        response.writeHead(404, { "content-type": "text/html" });
-        response.end("<h1>404 Not Found</h1>")
-    }
-}
-
-
-const server = http.createServer(serverFunction);
-
-server.listen(PORT);
- console.log(`Server running at http://localhost:${PORT}`);
-
-const changeState = () => {
-    rl.question(`${appState}--> `, (input) => {
-
-        input = input.trim().toLowerCase();
-
-        if (input === 'exit') {
-
-            console.log('Exiting the application...');
-
-            rl.close();
-
-            process.exit(0);
-
-        } else if (['norm', 'stop', 'idle'].includes(input)) {
-
-            
-
-            console.log(`reg = ${appState}-->${input}`);
-            appState = input;
-
-        } else {
-
-            console.log(`${appState}-->${input}. Invalid`);
-
-        }
-
-        changeState();
-
-    });
-}
-
-changeState();  
+  }
+});

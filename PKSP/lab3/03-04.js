@@ -33,22 +33,21 @@ const serverFunction = function (request, response) {
     const parsedNum = parseInt(parsedUrl.query.k);
 
     if (request.method === "GET" && parsedUrl.pathname === "/fact" && !isNaN(parsedNum)) {
-        //console.log(parsedNum);
-        factorial(parsedNum,(processedNum)=>{
-            if(processedNum!=null){
-                //console.log(processedNum);
-                response.writeHead(200,{'content-type':'application/json;charset=utf-8'});
+        factorial(parsedNum, (processedNum) => {
+            if (processedNum != null) {
+
+                response.writeHead(200, { 'content-type': 'application/json;charset=utf-8' });
                 response.end(JSON.stringify(
                     {
-                        k:parsedNum,
-                        fact:processedNum
+                        k: parsedNum,
+                        fact: processedNum
                     }
                 ))
             }
-            else{
-                response.writeHead(400,{'content-type':'application/json;charset=utf-8'});
+            else {
+                response.writeHead(400, { 'content-type': 'application/json;charset=utf-8' });
                 response.end(JSON.stringify({
-                    error:"Invalid factorial number"
+                    error: "Invalid factorial number"
                 }))
             }
         })
@@ -74,7 +73,3 @@ server.listen(PORT);
 
 
 console.log("Server running at http://localhost:5000/fact");
-
-//time passed in one folder: 378ms
-//time passed in two folders: 362ms(1st folder), 373ms(2nd folder)
-//time passed in three folders: 381ms(1st folder), 364ms(2nd folder), 325ms(3rd folder)
