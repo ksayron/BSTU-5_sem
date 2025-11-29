@@ -1,0 +1,53 @@
+ 
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>10-01</title></head>
+<body>
+  <h1>10-01</h1>
+  <button id="startBtn">StartWS</button>
+  <div id="log" style="white-space:pre-wrap;margin-top:1em;border:1px solid #ccc;padding:10px"></div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    function append(s){ logEl.textContent += s + '\n'; }
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      const ws = new WebSocket('ws://localhost:4000');
+
+      let clientSeq = 0;
+      let sendInterval = null;
+      let stoppedTimeout = null;
+
+      ws.addEventListener('open', () => {
+        append('[ws] open');
+        sendInterval = setInterval(() => {
+          clientSeq++;
+          const msg = '10-01-client: ' + clientSeq;
+          ws.send(msg);
+          append('[sent] ' + msg);
+        }, 3000);
+
+        stoppedTimeout = setTimeout(() => {
+          clearInterval(sendInterval);
+          append('[info] stopping after 25s, closing ws');
+          ws.close();
+        }, 25000);
+      });
+
+      ws.addEventListener('message', ev => {
+        append('[recv] ' + ev.data);
+      });
+
+      ws.addEventListener('close', () => {
+        append('[ws] closed');
+        clearInterval(sendInterval);
+        clearTimeout(stoppedTimeout);
+      });
+
+      ws.addEventListener('error', e => {
+        append('[ws] error ' + e);
+      });
+    });
+  </script>
+</body>
+</html>

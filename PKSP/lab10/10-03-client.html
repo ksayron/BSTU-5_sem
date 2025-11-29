@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>10-03a Client</title></head>
+<body>
+  <h3>Broadcast WS client</h3>
+  <div>
+    <input id="msg" placeholder="message">
+    <button id="send">Send</button>
+  </div>
+  <pre id="log" style="border:1px solid #ccc;padding:10px;height:200px;overflow:auto"></pre>
+
+  <script>
+    const log = document.getElementById('log');
+    function append(s){ log.textContent += s + '\n'; }
+
+    const ws = new WebSocket('ws://localhost:5001');
+    ws.addEventListener('open', () => append('[open]'));
+    ws.addEventListener('message', ev => append('[recv] ' + ev.data));
+    ws.addEventListener('close', () => append('[closed]'));
+
+    document.getElementById('send').addEventListener('click', () => {
+      const v = document.getElementById('msg').value;
+      ws.send(v);
+      append('[sent] ' + v);
+    });
+  </script>
+</body>
+</html>
