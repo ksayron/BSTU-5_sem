@@ -1,0 +1,63 @@
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+
+type FACULTY {
+    FACULTY: String!
+    FACULTY_NAME: String!
+}
+
+type PULPIT {
+    PULPIT: String!
+    PULPIT_NAME: String!
+    FACULTY: String!
+}
+
+type TEACHER {
+    TEACHER: String!
+    TEACHER_NAME: String!
+    PULPIT: String!
+}
+
+type SUBJECT {
+    SUBJECT: String!
+    SUBJECT_NAME: String!
+    PULPIT: String!
+}
+
+type TEACHERS_BY_FACULTY {
+    FACULTY: String!
+    TEACHERS: [TEACHER]
+}
+
+type SUBJECTS_BY_FACULTY {
+    PULPIT: String!
+    PULPIT_NAME: String!
+    FACULTY: String!
+    SUBJECTS: [SUBJECT]
+}
+
+
+type Query {
+    getFaculties(FACULTY: String): [FACULTY]
+    getPulpits(PULPIT: String): [PULPIT]
+    getTeachers(TEACHER: String): [TEACHER]
+    getSubjects(SUBJECT: String): [SUBJECT]
+    getTeachersByFaculty(FACULTY: String!): [TEACHERS_BY_FACULTY]
+    getSubjectsByFaculties(FACULTY: String!): [SUBJECTS_BY_FACULTY]
+}
+
+
+type Mutation {
+    setFaculty(FACULTY: String!, FACULTY_NAME: String!): FACULTY
+    setPulpit(PULPIT: String!, PULPIT_NAME: String!, FACULTY: String!): PULPIT
+    setTeacher(TEACHER: String!, TEACHER_NAME: String!, PULPIT: String!): TEACHER
+    setSubject(SUBJECT: String!, SUBJECT_NAME: String!, PULPIT: String!): SUBJECT
+
+    delFaculty(FACULTY: String!): FACULTY
+    delPulpit(PULPIT: String!): PULPIT
+    delTeacher(TEACHER: String!): TEACHER
+    delSubject(SUBJECT: String!): SUBJECT
+}

@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "express": "^5.1.0",
+    "express-graphql": "^0.12.0",
+    "graphql": "^15.10.1",
+    "mssql": "^12.1.1"
+  }
+}
