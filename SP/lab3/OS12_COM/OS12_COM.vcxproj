@@ -157,6 +157,9 @@
     <ClCompile Include="OS12_COM.cpp" />
     <ClCompile Include="Registry.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="OS12_COM.def" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

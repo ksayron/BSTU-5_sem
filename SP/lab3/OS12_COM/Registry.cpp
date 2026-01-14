@@ -4,7 +4,7 @@
 #include <objbase.h>
 #include <assert.h>
 #include <fstream>
-#include <shlwapi.h> // для PathCombine (если хотите); можно обойтися GetTempPathW
+#include <shlwapi.h> 
 #pragma comment(lib, "Shlwapi.lib")
 
 const int CLSID_STRING_SIZE = 39;
@@ -21,7 +21,6 @@ static void LogMsg(const WCHAR* fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	// простой форматтер (ограничим 2048 символов)
 	WCHAR buf[2048];
 	_vsnwprintf_s(buf, _countof(buf), _TRUNCATE, fmt, args);
 	va_end(args);
