@@ -19,12 +19,12 @@ int main() {
                 << " | Process Priority: " << processPriority
                 << " | Thread Priority: " << threadPriority
                 << " | Processor: " << currentProcessor << std::endl;
-            Sleep(20);
+            Sleep(200);
         }
     }
 
     clock_t endTime = clock();
-    double elapsedSeconds = static_cast<double>(endTime - startTime) / CLOCKS_PER_SEC * 7;
+    double elapsedSeconds = static_cast<double>(endTime - startTime) / CLOCKS_PER_SEC;
     std::cout << "Total execution time: " << elapsedSeconds << " seconds" << std::endl;
     int i;
     std::cin >> i;
