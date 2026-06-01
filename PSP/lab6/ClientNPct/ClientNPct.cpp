@@ -8,7 +8,7 @@
 
 
 #define PIPE_NAME L"\\\\.\\pipe\\Tube"	
-#define PIPE_NAME_LAN L"\\\\WIN-UCLB12VI625\\pipe\\cpipe"
+#define PIPE_NAME_LAN L"\\\\PCI\\pipe\\Tube"
 
 #define MAX_SIZE_OF_BUFFER 64
 
@@ -85,6 +85,11 @@ int main()
 	SetConsoleCP(1251);
 	SetConsoleOutputCP(1251);
 
+
+	int countOfMessages;
+	cout << "Введите кол-во сообщений: ";
+	cin >> countOfMessages;
+
 	DWORD dwWrite;
 	DWORD bytes;
 	char buffer[50] = { "NPct" };
@@ -94,18 +99,22 @@ int main()
 	try
 	{
 
-		if (!CallNamedPipe(
-			PIPE_NAME, 
-			buffer,
-			sizeof(buffer),
-			outbuffer,
-			MAX_SIZE_OF_BUFFER, 
-			&bytes, 
-			NULL))
+		for (int i = 1; i <= countOfMessages; i++)
 		{
-			throw SetPipeError("CallNamedPipe:", GetLastError());
+			if (!CallNamedPipe(
+				PIPE_NAME_LAN,
+				buffer,
+				sizeof(buffer),
+				outbuffer,
+				MAX_SIZE_OF_BUFFER,
+				&bytes,
+				NULL))
+			{
+				std::cout << GetLastError();
+				throw SetPipeError("CallNamedPipe:", GetLastError());
+			}
+			cout << "Сервер прислал сообщение: " << buffer << endl;
 		}
-		cout << "Сервер прислал сообщение: " << outbuffer << endl;
 	}
 	catch (string ErrorPipeText)
 	{

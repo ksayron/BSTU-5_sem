@@ -7,7 +7,8 @@
 #pragma warning(disable:4996)
 
 #define PIPE_NAME L"\\\\.\\pipe\\Tube"	
-#define PIPE_NAME_LAN L"\\\\WIN-UCLB12VI625\\pipe\\Tube"
+#define PIPE_NAME_LAN L"\\\\PCI\\pipe\\Tube"
+//DESKTOP-V5B0I0 WIN-UCLB12VI625
 
 #define MAX_SIZE_OF_BUFFER 64
 
@@ -84,7 +85,7 @@ int main()
 	SetConsoleCP(1251);
 	SetConsoleOutputCP(1251);
 
-	HANDLE cH; // дескриптор канала
+	HANDLE cH;
 	DWORD dwWrite;
 	char buffer[50] = { "NP" };
 
@@ -117,6 +118,7 @@ int main()
 			}
 			if (!ReadFile(cH, buffer, MAX_SIZE_OF_BUFFER, &dwWrite, NULL))
 			{
+				std::cout << GetLastError();
 				throw SetPipeError("ReadFile: ", GetLastError());
 			}
 			cout << "Сервер прислал сообщение: " << buffer << endl;

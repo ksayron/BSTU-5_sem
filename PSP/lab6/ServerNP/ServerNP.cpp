@@ -8,6 +8,7 @@
 
 // Локальный формат имени канала
 #define PIPE_NAME L"\\\\.\\pipe\\Tube"
+#define PIPE_NAME_LAN L"\\C:\\Users\\pipe\\Tube"
 
 using namespace std;
 
@@ -86,19 +87,31 @@ int main()
 	DWORD dwRead; 
 	char buffer[50];
 
+
+	SECURITY_ATTRIBUTES sa;
+	SECURITY_DESCRIPTOR sd;
+
+	InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+	SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);
+	sa.nLength = sizeof(sa);
+	sa.lpSecurityDescriptor = &sd;
+	sa.bInheritHandle = FALSE;
+
+	
 	try
 	{
 		while (true) {
 			
 			if ((sH = CreateNamedPipe(
 				PIPE_NAME,
-				PIPE_ACCESS_DUPLEX, 
-				PIPE_TYPE_MESSAGE | PIPE_WAIT, 
-				1,
-				NULL,
-				NULL,
-				INFINITE,
-				NULL)) == INVALID_HANDLE_VALUE) 
+				PIPE_ACCESS_DUPLEX,
+				PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+				PIPE_UNLIMITED_INSTANCES,
+				512,
+				512,
+				0,
+				&sa
+			)) == INVALID_HANDLE_VALUE)
 			{
 				throw SetPipeError("CreateNamedPipe: ", GetLastError());
 

@@ -7,7 +7,7 @@
 #pragma warning(disable:4996)
 
 #define PIPE_NAME L"\\\\.\\pipe\\Tube"	
-#define PIPE_NAME_LAN L"\\\\WIN-UCLB12VI625\\pipe\\cpipe"
+#define PIPE_NAME_LAN L"\\\\PCI\\pipe\\Tube"
 
 #define MAX_SIZE_OF_BUFFER 64
 
@@ -84,6 +84,10 @@ int main()
 	SetConsoleCP(1251);
 	SetConsoleOutputCP(1251);
 
+	int countOfMessages;
+	cout << "Введите кол-во сообщений: ";
+	cin >> countOfMessages;
+
 	HANDLE cH; 
 	DWORD dwWrite;
 	DWORD bytes;
@@ -96,7 +100,7 @@ int main()
 	{
 
 		if ((cH = CreateFile(
-			PIPE_NAME, 
+			PIPE_NAME_LAN, 
 			GENERIC_READ | GENERIC_WRITE, 
 			0, 
 			NULL,
@@ -113,19 +117,23 @@ int main()
 		}
 
 
-		if (!TransactNamedPipe(cH,
-			buffer, 
-			sizeof(buffer), 
-			outbuffer, 
-			MAX_SIZE_OF_BUFFER, 
-			&bytes, 
-			NULL)) 	{
-			throw SetPipeError("TransactNamedPipe:", GetLastError());
+		
+		for (int i = 1; i <= countOfMessages; i++)
+		{
+			if (!TransactNamedPipe(cH,
+				buffer,
+				sizeof(buffer),
+				outbuffer,
+				MAX_SIZE_OF_BUFFER,
+				&bytes,
+				NULL)) {
+				throw SetPipeError("TransactNamedPipe:", GetLastError());
+			}
+			cout << "Сервер прислал сообщение: " << buffer << endl;
 		}
-		cout << "Сервер прислал сообщение: " << outbuffer << endl;
-
 		if (!CloseHandle(cH))
 		{
+			std::cout << GetLastError();
 			throw SetPipeError("Close: ", GetLastError());
 		}
 	}

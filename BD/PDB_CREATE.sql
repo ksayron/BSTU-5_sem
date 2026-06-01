@@ -1,0 +1,58 @@
+CREATE PLUGGABLE DATABASE KNP_PDB 
+ADMIN USER KNP_USER IDENTIFIED BY "111"
+ROLES = (DBA)
+FILE_NAME_CONVERT=(
+    '/opt/oracle/oradata/FREE/pdbseed/',
+    '/opt/oracle/oradata/FREE/knppdb/'
+  );
+alter session set container=knp_pdb;
+alter pluggable DATABASE knp_pdb open;
+show con_name;
+
+create tablespace TS_KNP
+  DATAFILE 'TS_KNP_LABS_PDB.dbf'
+  size 7M
+  autoextend ON
+  next 5M
+  maxsize 20M;
+
+create temporary tablespace TS_KNP_TEMP
+  tempfile 'TS_KNP_TEMP_LABS_PDB.dbf'
+  size 5M
+  autoextend ON
+  next 3M
+  maxsize 30M;
+
+select TABLESPACE_NAME, STATUS, contents logging from SYS.DBA_TABLESPACES;
+drop tablespace TS_KNP including contents and datafiles;
+drop tablespace TS_KNP_TEMP including contents and datafiles;
+
+CREATE PROFILE PF_KNP LIMIT
+  FAILED_LOGIN_ATTEMPTS 7
+  SESSIONS_PER_USER 3
+  PASSWORD_LIFE_TIME 60
+  PASSWORD_REUSE_TIME 365
+  PASSWORD_LOCK_TIME 1
+  CONNECT_TIME 180;
+
+select * from DBA_PROFILES where profile = 'PF_KNP';
+drop profile PF_KNP;
+
+
+CREATE USER KNP identified by 111
+  DEFAULT TABLESPACE TS_KNP
+  TEMPORARY TABLESPACE TS_KNP_TEMP
+  PROFILE PF_KNP
+  ACCOUNT UNLOCK;
+  
+GRANT CREATE SESSION TO KNP;
+GRANT RESTRICTED SESSION TO KNP;
+GRANT CREATE ANY TABLE TO KNP;
+GRANT CREATE ANY VIEW TO KNP;
+GRANT CREATE SEQUENCE TO KNP;
+GRANT UNLIMITED TABLESPACE TO KNP;
+GRANT CREATE CLUSTER TO KNP;
+GRANT CREATE SYNONYM TO KNP;
+GRANT CREATE PUBLIC SYNONYM TO KNP;
+GRANT CREATE MATERIALIZED VIEW TO KNP;
+  
